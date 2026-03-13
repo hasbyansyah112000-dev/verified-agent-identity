@@ -1,0 +1,51 @@
+name: Verify Human Identity
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent_name:
+        description: 'Agent name'
+        required: true
+        default: 'Asgara'
+      agent_description:
+        description: 'Agent description'
+        required: true
+        default: 'Asgara AI Agent'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Wait before install
+        run: sleep 20
+
+      - name: Install ClawHub skill (with retry)
+        run: |
+          for i in 1 2 3 4; do
+            echo "Attempt $i..."
+            npx clawhub@0.7.0 install verified-agent-identity --force && break
+            echo "Rate limit hit. Retrying in 15 seconds..."
+            sleep 15
+          done
+
+      - name: Install script dependencies
+        run: |
+          cd scripts
+          npm install
+
+      - name: Create Ethereum Identity
+        run: node scripts/createNewEthereumIdentity.js
+
+      - name: Link Human to Agent
+        run: |
+          node scripts/manualLinkHumanToAgent.js \
+          --challenge '{"name":"Asgara","description":"Asgara AI Agent"}'
